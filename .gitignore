@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Jupyter
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# NEURON compilation artifacts
+x86_64/
+arm64/
+*.nrnmech
+*.o
+*.c
+mod_func.c
+
+# Pytest / Cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Antigravity / AI assistant metadata
+.gemini/
+.system_generated/
+
+# OS
+.DS_Store
+*.swp
+*.swo
+*~
