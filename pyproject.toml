@@ -23,9 +23,10 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "textual>=0.80.0",
     "rich>=13.0.0",
     "click>=8.0.0",
+    "prompt_toolkit>=3.0.0",
+    "textual>=0.80.0",
 ]
 
 [project.optional-dependencies]
