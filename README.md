@@ -42,6 +42,7 @@ Neuro-Lab bridges standard computational neuroscience simulation frameworks, sci
 - **Multi-Project Workspace Manager (`[p]`)**: Seamlessly switch between research workspaces, scaffold new project directory trees, and inspect code analytics.
 - **Hardware & Environment Telemetry**: Real-time tracking of Python virtualenvs, RAM usage, CUDA acceleration, and active model metrics.
 - **Toolchain Diagnostics (`doctor`)**: Comprehensive diagnostic check for gcc/clang compilers, `nrnivmodl`, CUDA, and scientific packages.
+- **Pre-flight Dependency Check**: `neurolab run` scans a script's imports and reports missing frameworks with `pip install` hints (and a non-zero exit code) instead of dumping a raw `ModuleNotFoundError` traceback.
 - **Daily Biophysical Foundations**: Rotating theoretical neuroscience principles (Hodgkin-Huxley kinetics, cable theory, STDP, Wilson-Cowan oscillators).
 
 ---
@@ -85,6 +86,33 @@ To install with complete neuroscience dependencies:
 ```bash
 pip install -e ".[all]"
 ```
+
+### Dependencies & running models
+
+The base install ships only the CLI itself. Model scripts need their own
+framework, so install the ones you use:
+
+```bash
+pip install brian2          # Brian 2 models
+pip install neuron          # NEURON cable models
+pip install nengo           # Nengo models
+pip install snntorch torch  # snnTorch models (snntorch does not pull torch)
+pip install neo elephant    # electrophysiology analysis
+```
+
+Before executing a script, `neurolab run` scans its imports and reports any
+missing package with a `pip install` hint instead of failing with a raw
+`ModuleNotFoundError` traceback:
+
+```
+[!] basal_ganglia.py needs packages that are not installed:
+      - nengo  ->  pip install nengo
+
+    Install the whole neuroscience stack with:  pip install -e ".[all]"
+```
+
+On a terminal you may choose to run anyway; when piped the run is skipped and
+exits non-zero, so scripts and CI fail fast.
 
 ---
 
@@ -220,9 +248,10 @@ pytest
 ```
 
 The suite covers workspace discovery and import-based file classification,
-template scaffolding, the diagnostic engine, the Click CLI surface, and a
-headless Textual TUI smoke test. CI runs it on every push and pull request
-across Python 3.10–3.13.
+template scaffolding, the diagnostic engine, pre-flight dependency detection,
+telemetry counting, the Click CLI surface and its exit codes, and headless
+Textual TUI tests that render every tool card and open the modals. CI runs it
+on every push and pull request across Python 3.10–3.13.
 
 ---
 
