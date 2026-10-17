@@ -8,6 +8,8 @@ import subprocess
 from pathlib import Path
 from typing import Dict, Any
 
+from .workspace import list_workspace_registry
+
 DAILY_CONCEPTS = [
     {
         "title": "Leaky Integrate-and-Fire (LIF)",
@@ -85,17 +87,25 @@ def get_system_telemetry(workspace_path: Path) -> Dict[str, Any]:
     except Exception:
         pass
 
-    # Model & Notebook counts
+    # Model & Notebook counts. Models reuse the same framework-aware registry
+    # as `neurolab list`, so the banner agrees with the registry and stray
+    # scripts (tests/, data/, results/) are not counted as models.
     model_count = 0
     notebook_count = 0
-    ignored_dirs = {".venv", "venv", ".git", "__pycache__", ".pytest_cache", "src", "build", "dist", ".gemini", ".ipynb_checkpoints"}
     if workspace_path.exists():
+        registry = list_workspace_registry(workspace_path)
+        model_count = sum(
+            1
+            for files in registry.values()
+            for f in files
+            if f.suffix.lower() in (".py", ".hoc", ".mod")
+        )
+
+        ignored_dirs = {".venv", "venv", ".git", "__pycache__", ".pytest_cache", "src", "build", "dist", ".gemini", ".ipynb_checkpoints", "tests"}
         for root, dirs, files in os.walk(workspace_path):
             dirs[:] = [d for d in dirs if d not in ignored_dirs and not d.endswith(".egg-info")]
             for f in files:
-                if f.endswith(".py") and not f.startswith("."):
-                    model_count += 1
-                elif f.endswith(".ipynb"):
+                if f.endswith(".ipynb"):
                     notebook_count += 1
 
     return {
