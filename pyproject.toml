@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neurolab-cli"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A modern terminal-native computational neuroscience workspace, dashboard, and toolchain orchestrator"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -31,6 +31,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
+    "build>=1.0",
 ]
 all = [
     "brian2",
@@ -51,6 +52,11 @@ lab = "neurolab.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Single source of truth for the version: neurolab.__version__.
+# Bump that one string, tag the commit, and the release workflow publishes it.
+[tool.setuptools.dynamic]
+version = { attr = "neurolab.__version__" }
 
 [tool.setuptools.package-data]
 "neurolab" = ["templates/*", "templates/**/*", "tui/*.tcss"]

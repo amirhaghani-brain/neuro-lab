@@ -14,6 +14,14 @@ def test_help_lists_commands():
         assert command in result.output
 
 
+def test_version_flag_reports_package_version():
+    from neurolab import __version__
+
+    result = CliRunner().invoke(main, ["--version"])
+    assert result.exit_code == 0
+    assert __version__ in result.output
+
+
 def test_list_shows_registry(workspace: Path):
     (workspace / "models" / "cortex.py").write_text(
         "from brian2 import *\n", encoding="utf-8"

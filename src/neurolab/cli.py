@@ -15,6 +15,7 @@ from rich.text import Text
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 
+from . import __version__
 from .core.workspace import (
     TOOLS,
     ToolDefinition,
@@ -781,6 +782,7 @@ def is_interactive_terminal() -> bool:
 
 
 @click.group(invoke_without_command=True)
+@click.version_option(version=__version__, prog_name="neurolab")
 @click.option("--workspace", "-w", type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path), help="Custom workspace directory path")
 @click.pass_context
 def main(ctx, workspace):

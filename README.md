@@ -255,6 +255,65 @@ on every push and pull request across Python 3.10–3.13.
 
 ---
 
+## Releasing
+
+The version lives in exactly **one** place: `src/neurolab/__init__.py`
+(`__version__`). `pyproject.toml` reads it dynamically, so a release is a
+version bump plus a tag.
+
+```bash
+# 1. Bump __version__ in src/neurolab/__init__.py and add a CHANGELOG entry
+git commit -am "release: v0.2.0"
+
+# 2. Tag and push - pushing the tag triggers the Release workflow
+git tag -a v0.2.0 -m "v0.2.0"
+git push origin main
+git push origin v0.2.0
+```
+
+The `Release` workflow then:
+
+1. Fails fast if the tag does not match `neurolab.__version__`.
+2. Builds the sdist and wheel and smoke-tests the wheel.
+3. Creates a GitHub Release with auto-generated notes and both artifacts attached.
+4. Publishes to PyPI, when the `PYPI_PUBLISH` repository variable is `true`.
+
+### Installing a specific version
+
+```bash
+pip install neurolab-cli          # latest
+pip install neurolab-cli==0.1.0   # an older release
+```
+
+Every release is also downloadable from the
+[Releases page](https://github.com/amirhaghani-brain/neuro-lab/releases), and any
+tag can be checked out directly:
+
+```bash
+git checkout v0.1.0
+```
+
+### Enabling PyPI publishing
+
+Publishing is opt-in so the workflow never fails on an unconfigured repo:
+
+1. On PyPI, add a **trusted publisher** for the `neurolab-cli` project:
+   owner `amirhaghani-brain`, repo `neuro-lab`, workflow `release.yml`,
+   environment `pypi`.
+2. On GitHub, add a repository **variable** `PYPI_PUBLISH = true`
+   (Settings → Secrets and variables → Actions → Variables).
+
+No API token is stored; the workflow authenticates via OIDC.
+
+### Building locally
+
+```bash
+pip install -e ".[dev]"
+python -m build      # produces dist/*.whl and dist/*.tar.gz
+```
+
+---
+
 ## Contributing
 
 Contributions from computational neuroscientists, biophysicists, and scientific Python developers are welcome:
