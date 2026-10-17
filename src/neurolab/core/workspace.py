@@ -1,10 +1,11 @@
 """Workspace management, file discovery, and template instantiation."""
 
 import os
+import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 
 
 @dataclass
@@ -94,6 +95,195 @@ def get_templates_dir() -> Path:
     return Path(__file__).resolve().parent.parent / "templates"
 
 
+# Directories that never contain user models and must be skipped during scans.
+IGNORED_DIRS = {
+    ".venv", "venv", ".git", "__pycache__", ".pytest_cache", ".mypy_cache",
+    "src", "build", "dist", "egg-info", ".eggs", ".gemini", ".ipynb_checkpoints",
+}
+
+# Import signatures used to attribute a Python script in a *shared* target
+# directory (e.g. models/ is shared by Brian 2, NEURON, Nengo and snnTorch) to
+# the framework it actually uses, instead of reporting it under every toolchain.
+TOOL_IMPORT_SIGNATURES: Dict[str, tuple] = {
+    "brian2": (r"\bfrom\s+brian2\b", r"\bimport\s+brian2\b"),
+    "neuron": (
+        r"\bfrom\s+neuron\b",
+        r"\bimport\s+neuron\b",
+        r"\bfrom\s+hoc\b",
+        r"\bimport\s+hoc\b",
+    ),
+    "nengo": (r"\bfrom\s+nengo\b", r"\bimport\s+nengo\b"),
+    "snntorch": (r"\bfrom\s+snntorch\b", r"\bimport\s+snntorch\b"),
+    "neo": (
+        r"\bfrom\s+neo\b",
+        r"\bimport\s+neo\b",
+        r"\bfrom\s+elephant\b",
+        r"\bimport\s+elephant\b",
+    ),
+}
+
+# How many bytes of a script to read when sniffing imports.
+_CLASSIFY_HEAD_BYTES = 8192
+
+
+def classify_python_source(text: str) -> Set[str]:
+    """Return the set of tool ids whose framework the given source imports."""
+    owners: Set[str] = set()
+    for tool_id, patterns in TOOL_IMPORT_SIGNATURES.items():
+        for pattern in patterns:
+            if re.search(pattern, text):
+                owners.add(tool_id)
+                break
+    return owners
+
+
+def classify_python_file(path: Path) -> Set[str]:
+    """Read the head of a Python file and classify it by framework imports."""
+    try:
+        with path.open("r", encoding="utf-8", errors="ignore") as handle:
+            head = handle.read(_CLASSIFY_HEAD_BYTES)
+    except OSError:
+        return set()
+    return classify_python_source(head)
+
+
+def _shared_py_target_dirs() -> Dict[str, int]:
+    """Count how many tools scan .py files inside each target directory."""
+    counts: Dict[str, int] = {}
+    for tool in TOOLS.values():
+        if ".py" in tool.extensions:
+            counts[tool.target_dir] = counts.get(tool.target_dir, 0) + 1
+    return counts
+
+
+def list_tool_files(
+    tool_id: str,
+    workspace: Path,
+    include_unclassified: bool = True,
+) -> List[Path]:
+    """Find files belonging to a tool inside its target directory.
+
+    Unlike a naive glob this never scans the workspace root, so top-level
+    scripts are not attributed to every toolchain. When a target directory is
+    shared by several Python frameworks (``models/``), files are attributed by
+    their imports; scripts that match no framework are only returned when
+    ``include_unclassified`` is true.
+    """
+    if tool_id not in TOOLS:
+        return []
+
+    tool = TOOLS[tool_id]
+    target_path = workspace / tool.target_dir
+    if not target_path.exists():
+        return []
+
+    shared_py = _shared_py_target_dirs().get(tool.target_dir, 0) > 1
+    results: List[Path] = []
+    seen: Set[Path] = set()
+
+    for root, dirs, files in os.walk(target_path):
+        dirs[:] = [
+            d for d in dirs
+            if d not in IGNORED_DIRS and not d.endswith(".egg-info")
+        ]
+        for name in files:
+            if name.startswith("."):
+                continue
+            ext = Path(name).suffix.lower()
+            if ext not in tool.extensions:
+                continue
+
+            full_path = Path(root) / name
+            if full_path in seen:
+                continue
+
+            if ext == ".py" and shared_py:
+                owners = classify_python_file(full_path)
+                if owners:
+                    if tool_id not in owners:
+                        continue
+                elif not include_unclassified:
+                    continue
+
+            seen.add(full_path)
+            results.append(full_path)
+
+    results.sort(
+        key=lambda p: str(p.relative_to(workspace) if p.is_relative_to(workspace) else p)
+    )
+    return results
+
+
+def list_root_scripts(workspace: Path) -> List[Path]:
+    """Return Python scripts sitting directly in the workspace root."""
+    if not workspace.exists():
+        return []
+    scripts = [
+        p for p in workspace.iterdir()
+        if p.is_file() and p.suffix.lower() == ".py" and not p.name.startswith(".")
+    ]
+    scripts.sort(key=lambda p: p.name)
+    return scripts
+
+
+def list_workspace_registry(workspace: Path) -> Dict[str, List[Path]]:
+    """Group workspace files by owning tool for display.
+
+    Keys are tool ids, plus two pseudo-groups: ``"unclassified"`` for Python
+    files in a shared directory that import no known framework, and ``"root"``
+    for scripts sitting directly in the workspace root. Every file appears at
+    most once, so the registry never double-counts.
+    """
+    registry: Dict[str, List[Path]] = {}
+    claimed: Set[Path] = set()
+
+    def _sort(paths: List[Path]) -> List[Path]:
+        return sorted(
+            paths,
+            key=lambda p: str(p.relative_to(workspace) if p.is_relative_to(workspace) else p),
+        )
+
+    # Files that positively match a toolchain (by extension or imports).
+    for tool_id in TOOLS:
+        files = list_tool_files(tool_id, workspace, include_unclassified=False)
+        fresh = [f for f in files if f not in claimed]
+        for f in fresh:
+            claimed.add(f)
+        if fresh:
+            registry[tool_id] = _sort(fresh)
+
+    # Python files in shared directories that match no known framework.
+    unclassified: List[Path] = []
+    for target_dir, count in _shared_py_target_dirs().items():
+        if count <= 1:
+            continue
+        base = workspace / target_dir
+        if not base.exists():
+            continue
+        for root, dirs, files in os.walk(base):
+            dirs[:] = [
+                d for d in dirs
+                if d not in IGNORED_DIRS and not d.endswith(".egg-info")
+            ]
+            for name in files:
+                if name.startswith(".") or Path(name).suffix.lower() != ".py":
+                    continue
+                full_path = Path(root) / name
+                if full_path in claimed:
+                    continue
+                if not classify_python_file(full_path):
+                    unclassified.append(full_path)
+                    claimed.add(full_path)
+    if unclassified:
+        registry["unclassified"] = _sort(unclassified)
+
+    root_scripts = list_root_scripts(workspace)
+    if root_scripts:
+        registry["root"] = root_scripts
+
+    return registry
+
+
 def resolve_workspace_root() -> Path:
     # 1. Environment variable if set
     env_root = os.environ.get("NEUROLAB_WORKSPACE")
@@ -117,51 +307,6 @@ def ensure_workspace_dirs(workspace: Path):
     """Ensure standard workspace folders exist."""
     for folder in ["models", "notebooks", "data", "analysis", "results"]:
         (workspace / folder).mkdir(parents=True, exist_ok=True)
-
-
-def list_tool_files(tool_id: str, workspace: Path) -> List[Path]:
-    """Find all files in workspace matching the tool's supported extensions."""
-    if tool_id not in TOOLS:
-        return []
-    
-    tool = TOOLS[tool_id]
-    results = []
-    
-    # Target directory for this tool (e.g. models/ or notebooks/ or analysis/)
-    target_path = workspace / tool.target_dir
-    search_paths = [target_path]
-    if workspace != target_path:
-        search_paths.append(workspace)
-
-    seen = set()
-    ignored_dirs = {
-        ".venv", "venv", ".git", "__pycache__", ".pytest_cache",
-        "src", "build", "dist", "egg-info", ".eggs", ".gemini", ".ipynb_checkpoints"
-    }
-
-    for search_dir in search_paths:
-        if not search_dir.exists():
-            continue
-        for root, dirs, files in os.walk(search_dir):
-            # Exclude unwanted directories
-            dirs[:] = [d for d in dirs if d not in ignored_dirs and not d.endswith(".egg-info")]
-            
-            # If scanning root workspace, don't descend into other tool dirs already scanned
-            rel_root = Path(root).relative_to(workspace) if Path(root) != workspace else Path(".")
-            if search_dir == workspace and rel_root.parts and rel_root.parts[0] in ["src", "models", "notebooks", "analysis", "data"]:
-                continue
-
-            for file in files:
-                ext = Path(file).suffix.lower()
-                if ext in tool.extensions:
-                    full_path = Path(root) / file
-                    if full_path not in seen and not file.startswith("."):
-                        seen.add(full_path)
-                        results.append(full_path)
-
-    # Sort alphabetically by relative path
-    results.sort(key=lambda p: str(p.relative_to(workspace) if p.is_relative_to(workspace) else p))
-    return results
 
 
 def create_file_from_template(tool_id: str, filename: str, workspace: Path) -> Path:
@@ -197,17 +342,13 @@ def create_file_from_template(tool_id: str, filename: str, workspace: Path) -> P
 def find_all_workspace_files(workspace: Path, query: str = "") -> List[Path]:
     """Find all files in workspace matching an optional query string."""
     results = []
-    ignored_dirs = {
-        ".venv", "venv", ".git", "__pycache__", ".pytest_cache",
-        "src", "build", "dist", "egg-info", ".eggs", ".gemini", ".ipynb_checkpoints"
-    }
-    
+
     if not workspace.exists():
         return []
 
     query_lower = query.lower().strip()
     for root, dirs, files in os.walk(workspace):
-        dirs[:] = [d for d in dirs if d not in ignored_dirs and not d.endswith(".egg-info")]
+        dirs[:] = [d for d in dirs if d not in IGNORED_DIRS and not d.endswith(".egg-info")]
         for file in files:
             if file.startswith("."):
                 continue

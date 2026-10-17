@@ -29,6 +29,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
 all = [
     "brian2",
     "neuron",
@@ -51,3 +54,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "neurolab" = ["templates/*", "templates/**/*", "tui/*.tcss"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

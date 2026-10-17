@@ -38,6 +38,7 @@ Neuro-Lab bridges standard computational neuroscience simulation frameworks, sci
 - **Adaptive Window Sizing**: Dynamic terminal geometry detection that scales from compact split-panes to multi-column widescreen hero layouts.
 - **LazyVim / Neovim Workspace Integration**: Launch full IDE mode on project root (`nvim .`) with Neo-tree, Telescope, and LSP support, or jump directly to target scripts.
 - **Fuzzy File Finder (`[f]`)**: Instantly locate, inspect, edit, or run any model script, notebook, or dataset in the workspace.
+- **Framework-aware File Registry**: `neurolab list` attributes each model script to the framework it actually imports (Brian 2, NEURON, Nengo, snnTorch) instead of reporting it under every toolchain that shares `models/`.
 - **Multi-Project Workspace Manager (`[p]`)**: Seamlessly switch between research workspaces, scaffold new project directory trees, and inspect code analytics.
 - **Hardware & Environment Telemetry**: Real-time tracking of Python virtualenvs, RAM usage, CUDA acceleration, and active model metrics.
 - **Toolchain Diagnostics (`doctor`)**: Comprehensive diagnostic check for gcc/clang compilers, `nrnivmodl`, CUDA, and scientific packages.
@@ -91,14 +92,26 @@ pip install -e ".[all]"
 
 ### Interactive Command Center
 
-Launch the main command shell:
+Launch the full-screen dashboard (Textual TUI):
 ```bash
 lab
 # or
 neurolab
+# or
+neurolab tui
+```
+
+On a real terminal this opens the interactive TUI. When output is piped (CI,
+scripts, redirection) it falls back to the scriptable prompt shell instead.
+You can always request the classic shell explicitly:
+
+```bash
+neurolab shell
 ```
 
 #### Interactive Prompt Shortcuts
+
+The shortcuts below apply to the classic shell (`neurolab shell`):
 
 | Shortcut | Command | Action |
 | :---: | :--- | :--- |
@@ -121,6 +134,12 @@ neurolab
 Neuro-Lab can also be executed directly from bash scripts or CLI automation:
 
 ```bash
+# Launch the full-screen TUI dashboard
+neurolab tui
+
+# Launch the classic prompt shell
+neurolab shell
+
 # Run system diagnostics
 neurolab doctor
 
@@ -188,6 +207,22 @@ Run `neurolab doctor` at any time to verify system health:
   [PASS]    Elephant          Neuroscience      1.2.1           Spike-train metrics & ISI
   [PASS]    JupyterLab        Neuroscience      4.6.3           Interactive notebooks
 ```
+
+---
+
+## Development
+
+Install the package with test dependencies and run the suite:
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
+
+The suite covers workspace discovery and import-based file classification,
+template scaffolding, the diagnostic engine, the Click CLI surface, and a
+headless Textual TUI smoke test. CI runs it on every push and pull request
+across Python 3.10–3.13.
 
 ---
 

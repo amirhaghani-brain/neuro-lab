@@ -22,6 +22,7 @@ from .core.workspace import (
     ensure_workspace_dirs,
     create_file_from_template,
     list_tool_files,
+    list_workspace_registry,
     find_all_workspace_files,
     discover_projects,
     scaffold_new_project,
@@ -180,7 +181,7 @@ def print_banner(workspace: Path):
     ]
 
     for key, tool_id, name, desc, dir_path in tool_keys:
-        files = list_tool_files(tool_id, workspace)
+        files = list_tool_files(tool_id, workspace, include_unclassified=False)
         cnt_str = f"[{len(files)} file{'s' if len(files) != 1 else ''}]"
         tool_table.add_row(f"[{key}]", name, desc, dir_path, cnt_str)
 
@@ -574,21 +575,26 @@ def cmd_list(workspace: Path):
     """List all computational neuroscience models and notebooks in the workspace."""
     console.print(f"\n[bold cyan]=== [ Workspace File Registry: {workspace} ] ===[/bold cyan]\n")
 
-    found_any = False
-    for tool_id, tool in TOOLS.items():
-        files = list_tool_files(tool_id, workspace)
-        if files:
-            found_any = True
-            console.print(f"[bold {tool.color}][{tool.tag}][/bold {tool.color}] {tool.name} ({tool.target_dir}/):")
-            for f in files:
-                try:
-                    rel = f.relative_to(workspace)
-                except ValueError:
-                    rel = f
-                console.print(f"   [•] {rel}")
-            console.print()
+    registry = list_workspace_registry(workspace)
 
-    if not found_any:
+    for group, files in registry.items():
+        if group == "unclassified":
+            console.print("[bold white][shared][/bold white] Unclassified Python models:")
+        elif group == "root":
+            console.print("[bold white][root][/bold white] Workspace root scripts:")
+        else:
+            tool = TOOLS[group]
+            console.print(f"[bold {tool.color}][{tool.tag}][/bold {tool.color}] {tool.name} ({tool.target_dir}/):")
+
+        for f in files:
+            try:
+                rel = f.relative_to(workspace)
+            except ValueError:
+                rel = f
+            console.print(f"   [•] {rel}")
+        console.print()
+
+    if not registry:
         console.print("[dim]No model or notebook files found in workspace yet.[/dim]\n")
 
 
@@ -743,6 +749,22 @@ def interactive_repl(workspace: Path):
 
 # --- Click Subcommands for Direct CLI Usage ---
 
+
+def launch_tui(workspace: Path):
+    """Launch the full-screen Textual dashboard."""
+    from .tui.app import NeuroLabApp
+
+    NeuroLabApp(workspace_path=workspace).run()
+
+
+def is_interactive_terminal() -> bool:
+    """True when both stdin and stdout are attached to a real terminal."""
+    try:
+        return bool(sys.stdin.isatty() and sys.stdout.isatty())
+    except (AttributeError, ValueError):
+        return False
+
+
 @click.group(invoke_without_command=True)
 @click.option("--workspace", "-w", type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path), help="Custom workspace directory path")
 @click.pass_context
@@ -753,7 +775,26 @@ def main(ctx, workspace):
     ctx.obj["workspace"] = workspace_path
 
     if ctx.invoked_subcommand is None:
-        interactive_repl(workspace_path)
+        # Default to the full-screen TUI on a real terminal, and fall back to
+        # the scriptable prompt shell when piped (CI, tests, redirection).
+        if is_interactive_terminal():
+            launch_tui(workspace_path)
+        else:
+            interactive_repl(workspace_path)
+
+
+@main.command()
+@click.pass_context
+def tui(ctx):
+    """Launch the full-screen Textual dashboard."""
+    launch_tui(ctx.obj["workspace"])
+
+
+@main.command(name="shell")
+@click.pass_context
+def shell(ctx):
+    """Launch the classic prompt-toolkit command shell."""
+    interactive_repl(ctx.obj["workspace"])
 
 
 @main.command()

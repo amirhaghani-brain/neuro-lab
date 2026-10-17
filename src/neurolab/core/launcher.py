@@ -60,7 +60,7 @@ def launch_nengo_gui(target_file: Path) -> subprocess.Popen:
     nengo_cmd = shutil.which("nengo")
     if not nengo_cmd:
         venv_nengo = Path(sys.executable).parent / "nengo"
-        if vengo_nengo := venv_nengo.exists():
+        if venv_nengo.exists():
             nengo_cmd = str(venv_nengo)
         else:
             nengo_cmd = "nengo"
@@ -87,7 +87,9 @@ def run_script_interactive(target_file: Path) -> int:
     print(f"\n\033[1;36m=== RUNNING {target_file.name} ===\033[0m\n")
     res = subprocess.run([sys.executable, str(target_file)], cwd=str(target_file.parent))
     print(f"\n\033[1;32m=== FINISHED (Exit code {res.returncode}) ===\033[0m")
-    input("\nPress Enter to return to Neuro-Lab...")
+    # Only pause when attached to a terminal so scripts and CI never hang.
+    if sys.stdin.isatty():
+        input("\nPress Enter to return to Neuro-Lab...")
     return res.returncode
 
 
