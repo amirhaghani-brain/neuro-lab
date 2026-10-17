@@ -43,3 +43,30 @@ def test_doctor_runs():
     result = CliRunner().invoke(main, ["doctor"])
     assert result.exit_code == 0
     assert "Toolchain Diagnostics" in result.output
+
+
+def test_run_missing_dependency_exits_nonzero(workspace: Path):
+    (workspace / "models" / "needs_missing.py").write_text(
+        "import definitely_not_a_real_module_xyz\n", encoding="utf-8"
+    )
+    result = CliRunner().invoke(main, ["-w", str(workspace), "run", "needs_missing.py"])
+    assert result.exit_code != 0
+    assert "not installed" in result.output
+    assert "pip install definitely_not_a_real_module_xyz" in result.output
+
+
+def test_run_unknown_file_exits_nonzero(workspace: Path):
+    result = CliRunner().invoke(main, ["-w", str(workspace), "run", "ghost.py"])
+    assert result.exit_code != 0
+    assert "File not found" in result.output
+
+
+def test_run_executes_script_with_deps_present(workspace: Path):
+    (workspace / "models" / "ok.py").write_text(
+        "import math\nprint('ran ok', math.floor(1.5))\n", encoding="utf-8"
+    )
+    result = CliRunner().invoke(main, ["-w", str(workspace), "run", "ok.py"])
+    assert result.exit_code == 0
+    # The child's stdout streams to the real terminal, so assert on the wrapper.
+    assert "RUNNING ok.py" in result.output
+    assert "Exit code 0" in result.output

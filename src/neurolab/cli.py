@@ -598,8 +598,8 @@ def cmd_list(workspace: Path):
         console.print("[dim]No model or notebook files found in workspace yet.[/dim]\n")
 
 
-def cmd_run(arg: str, workspace: Path):
-    """Run a specified simulation file."""
+def cmd_run(arg: str, workspace: Path) -> int:
+    """Run a specified simulation file. Returns the child process exit code."""
     p = Path(arg)
     if not p.is_absolute():
         p = workspace / p
@@ -613,9 +613,9 @@ def cmd_run(arg: str, workspace: Path):
 
     if not p.exists():
         console.print(f"[bold red][-] File not found: {arg}[/bold red]")
-        return
+        return 1
 
-    run_script_interactive(p)
+    return run_script_interactive(p)
 
 
 def print_help():
@@ -839,7 +839,7 @@ def editor(ctx, file_path):
 @click.pass_context
 def run(ctx, file_path):
     """Execute a simulation script in the terminal."""
-    cmd_run(file_path, ctx.obj["workspace"])
+    ctx.exit(cmd_run(file_path, ctx.obj["workspace"]))
 
 
 @main.command()

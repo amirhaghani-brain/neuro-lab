@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from typing import Optional, List, Tuple
 
+from .deps import missing_imports, format_missing_report
+
 
 def get_default_editor() -> str:
     """Determine researcher's preferred editor, prioritizing LazyVim / Neovim."""
@@ -78,6 +80,23 @@ def launch_nengo_gui(target_file: Path) -> subprocess.Popen:
 
 def run_script_interactive(target_file: Path) -> int:
     """Execute Python script in the terminal interactively."""
+    # Pre-flight dependency check: a missing framework should produce a clear,
+    # actionable message instead of a raw ModuleNotFoundError traceback from
+    # the child process.
+    missing = missing_imports(target_file)
+    if missing:
+        print(f"\n\033[1;33m{format_missing_report(target_file, missing)}\033[0m\n")
+        if sys.stdin.isatty():
+            try:
+                reply = input("Run anyway? [y/N]: ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                reply = ""
+            if reply not in ("y", "yes"):
+                return 1
+        else:
+            print("\033[1;31m[-] Skipping execution.\033[0m")
+            return 1
+
     # If file is a NEURON script and directory has .mod files, check for nrnivmodl
     mod_files = list(target_file.parent.glob("*.mod"))
     if mod_files and shutil.which("nrnivmodl") and not (target_file.parent / "x86_64").exists():
