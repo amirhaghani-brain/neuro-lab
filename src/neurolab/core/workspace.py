@@ -19,6 +19,7 @@ class ToolDefinition:
     tag: str
     color: str
     default_filename: str
+    icon: str = "🔬"
 
 
 TOOLS: Dict[str, ToolDefinition] = {
@@ -31,7 +32,8 @@ TOOLS: Dict[str, ToolDefinition] = {
         template_name="jupyter_starter.ipynb",
         tag="jupyter",
         color="#f0883e",
-        default_filename="experiment_01.ipynb"
+        default_filename="experiment_01.ipynb",
+        icon="🪐",
     ),
     "brian2": ToolDefinition(
         id="brian2",
@@ -42,7 +44,8 @@ TOOLS: Dict[str, ToolDefinition] = {
         template_name="brian2_lif.py",
         tag="brian2",
         color="#58a6ff",
-        default_filename="brian2_model.py"
+        default_filename="brian2_model.py",
+        icon="⚡",
     ),
     "neuron": ToolDefinition(
         id="neuron",
@@ -53,7 +56,8 @@ TOOLS: Dict[str, ToolDefinition] = {
         template_name="neuron_soma.py",
         tag="neuron",
         color="#3fb950",
-        default_filename="neuron_cell.py"
+        default_filename="neuron_cell.py",
+        icon="🧬",
     ),
     "nengo": ToolDefinition(
         id="nengo",
@@ -64,7 +68,8 @@ TOOLS: Dict[str, ToolDefinition] = {
         template_name="nengo_network.py",
         tag="nengo",
         color="#bc8cff",
-        default_filename="nengo_circuit.py"
+        default_filename="nengo_circuit.py",
+        icon="🧠",
     ),
     "snntorch": ToolDefinition(
         id="snntorch",
@@ -75,7 +80,8 @@ TOOLS: Dict[str, ToolDefinition] = {
         template_name="snntorch_model.py",
         tag="snntorch",
         color="#f85149",
-        default_filename="snn_classifier.py"
+        default_filename="snn_classifier.py",
+        icon="🔥",
     ),
     "neo": ToolDefinition(
         id="neo",
@@ -86,7 +92,8 @@ TOOLS: Dict[str, ToolDefinition] = {
         template_name="neo_analysis.py",
         tag="neo",
         color="#e3b341",
-        default_filename="electrophys_analysis.py"
+        default_filename="electrophys_analysis.py",
+        icon="📈",
     ),
 }
 
