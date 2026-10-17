@@ -27,3 +27,47 @@ def test_neuroscience_frameworks_present_in_report():
     categories = {c.category for c in run_diagnostics()}
     assert "Neuroscience Toolchain" in categories
     assert "Core Scientific Stack" in categories
+
+
+def test_doctor_expands_warnings_below_the_table(capsys):
+    from neurolab.cli import cmd_doctor
+
+    checks = [
+        DiagnosticCheck(
+            name="Brian 2",
+            category="Neuroscience Toolchain",
+            status="OK",
+            version="2.10.1",
+            details="ODE spiking neural networks",
+        ),
+        DiagnosticCheck(
+            name="Nengo",
+            category="Neuroscience Toolchain",
+            status="WARN",
+            version=None,
+            details="Not installed. Install with `pip install nengo`",
+        ),
+    ]
+    cmd_doctor(checks)
+    out = capsys.readouterr().out
+    assert "Attention needed:" in out
+    assert "pip install nengo" in out
+    assert "All checks passed." not in out
+
+
+def test_doctor_reports_all_clear(capsys):
+    from neurolab.cli import cmd_doctor
+
+    checks = [
+        DiagnosticCheck(
+            name="Brian 2",
+            category="Neuroscience Toolchain",
+            status="OK",
+            version="2.10.1",
+            details="ODE spiking neural networks",
+        )
+    ]
+    cmd_doctor(checks)
+    out = capsys.readouterr().out
+    assert "All checks passed." in out
+    assert "Attention needed:" not in out

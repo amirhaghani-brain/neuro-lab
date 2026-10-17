@@ -540,18 +540,23 @@ def cmd_editor(workspace: Path, file_arg: Optional[str] = None):
         open_in_editor(workspace)
 
 
-def cmd_doctor():
+def cmd_doctor(checks: Optional[List] = None):
     """Run environment and toolchain diagnostic checks."""
     console.print("\n[bold cyan]=== [ Toolchain Diagnostics ] ===[/bold cyan]\n")
-    
+
+    width = get_terminal_width()
+    show_category = width >= 110
+
     table = Table(box=None, expand=True, padding=(0, 1))
     table.add_column("Status", justify="left", width=8, no_wrap=True)
     table.add_column("Component", style="bold white", width=18, no_wrap=True)
-    table.add_column("Category", style="dim", width=22, no_wrap=True)
-    table.add_column("Version", style="green", width=14, no_wrap=True)
-    table.add_column("Details", ratio=1)
+    if show_category:
+        table.add_column("Category", style="dim", width=22, no_wrap=True)
+    table.add_column("Version", style="green", width=16, no_wrap=True)
+    # Keep each check on one line; long details are expanded in the notes below.
+    table.add_column("Details", ratio=1, no_wrap=True, overflow="ellipsis")
 
-    checks = run_diagnostics()
+    checks = run_diagnostics() if checks is None else checks
     for check in checks:
         status_badge = {
             "OK": "[bold green][PASS][/bold green]",
@@ -559,16 +564,26 @@ def cmd_doctor():
             "FAIL": "[bold red][FAIL][/bold red]",
         }.get(check.status, check.status)
 
-        table.add_row(
-            status_badge,
-            check.name,
-            check.category,
-            check.version or "[dim]N/A[/dim]",
-            check.details
-        )
+        row: List[str] = [status_badge, check.name]
+        if show_category:
+            row.append(check.category)
+        row.append(check.version or "[dim]N/A[/dim]")
+        row.append(check.details)
+        table.add_row(*row)
 
     console.print(table)
     console.print()
+
+    # Expand anything that is not OK so the actionable text is never truncated.
+    problems = [c for c in checks if c.status != "OK"]
+    if problems:
+        console.print("[bold yellow]Attention needed:[/bold yellow]")
+        for check in problems:
+            badge = "[bold red]FAIL[/bold red]" if check.status == "FAIL" else "[bold yellow]WARN[/bold yellow]"
+            console.print(f"  {badge} [bold white]{check.name}[/bold white] - {check.details}")
+        console.print()
+    else:
+        console.print("[bold green]All checks passed.[/bold green]\n")
 
 
 def cmd_list(workspace: Path):
