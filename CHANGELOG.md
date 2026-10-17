@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-10-17
+## [0.1.7] - 2026-10-17
 
-Initial public release of the Neuro-Lab command center.
+Today's work: the TUI is now reachable and fixed, the registry is
+framework-aware, `run` explains missing dependencies, and the project gained a
+test suite, CI, and tag-driven releases.
 
 ### Added
 
@@ -26,16 +28,13 @@ Initial public release of the Neuro-Lab command center.
   reported with `pip install` hints instead of a raw `ModuleNotFoundError`
   traceback. On a TTY the run can proceed; when piped it is skipped.
 - `neurolab --version`.
-- Toolchain bridges for JupyterLab, Brian 2, NEURON, Nengo & Nengo GUI,
-  snnTorch, and Neo / Elephant, with standard templates for each.
 - Test suite covering workspace discovery, import-based classification,
   template scaffolding, diagnostics, dependency detection, telemetry, the CLI
-  surface and exit codes, and headless TUI rendering (56 tests).
+  surface and exit codes, and headless TUI rendering (57 tests).
 - GitHub Actions CI running the suite on Python 3.10–3.13.
-- GitHub Actions release workflow: pushing a `v*` tag builds the sdist and
-  wheel, verifies the tag matches `neurolab.__version__`, and creates a GitHub
-  Release; publishing to PyPI is opt-in via the `PYPI_PUBLISH` repository
-  variable.
+- GitHub Actions release workflow: pushing a `v*` tag verifies the tag matches
+  `neurolab.__version__`, builds the sdist and wheel, creates a GitHub Release,
+  and publishes to PyPI when the `PYPI_PUBLISH` repository variable is enabled.
 
 ### Changed
 
@@ -60,5 +59,26 @@ Initial public release of the Neuro-Lab command center.
 - nengo's pytest plugin is incompatible with pytest >= 8 and broke the test
   suite when nengo was installed; it is now disabled.
 
-[Unreleased]: https://github.com/amirhaghani-brain/neuro-lab/compare/v0.1.0...HEAD
+## [0.1.0] - 2026-08-28
+
+Initial release: the terminal-native Neuro-Lab command center.
+
+### Added
+
+- Adaptive dashboard banner with anatomical ASCII brain, environment telemetry
+  (Python, virtualenv, RAM, CUDA), and a rotating daily neuroscience
+  foundation.
+- Interactive prompt-toolkit shell with autocompletion and single-character
+  shortcuts.
+- Toolchain bridges and standard templates for **JupyterLab**, **Brian 2**,
+  **NEURON**, **Nengo & Nengo GUI**, **snnTorch**, and **Neo / Elephant**.
+- Toolchain diagnostics (`doctor`) covering compilers, `nrnivmodl`, CUDA, and
+  the scientific stack.
+- Fuzzy file finder across the workspace.
+- Multi-project workspace manager: switch workspaces or scaffold new ones.
+- LazyVim / Neovim workspace integration.
+- Adaptive layout that scales from compact split panes to widescreen.
+
+[Unreleased]: https://github.com/amirhaghani-brain/neuro-lab/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/amirhaghani-brain/neuro-lab/compare/v0.1.0...v0.1.7
 [0.1.0]: https://github.com/amirhaghani-brain/neuro-lab/releases/tag/v0.1.0

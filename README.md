@@ -263,12 +263,12 @@ version bump plus a tag.
 
 ```bash
 # 1. Bump __version__ in src/neurolab/__init__.py and add a CHANGELOG entry
-git commit -am "release: v0.2.0"
+git commit -am "release: v0.1.8"
 
 # 2. Tag and push - pushing the tag triggers the Release workflow
-git tag -a v0.2.0 -m "v0.2.0"
+git tag -a v0.1.8 -m "v0.1.8"
 git push origin main
-git push origin v0.2.0
+git push origin v0.1.8
 ```
 
 The `Release` workflow then:
