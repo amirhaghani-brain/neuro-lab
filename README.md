@@ -12,6 +12,7 @@
   <a href="https://pypi.org/project/neurolab-cli/"><img src="https://img.shields.io/pypi/pyversions/neurolab-cli" alt="Python"></a>
   <a href="https://github.com/amirhaghani-brain/neuro-lab/actions/workflows/ci.yml"><img src="https://github.com/amirhaghani-brain/neuro-lab/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/amirhaghani-brain/neuro-lab/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-8b5cf6" alt="MIT"></a>
+  <a href="https://hub.xerj.org/contributors/amirhaghani-brain"><img src="https://hub.xerj.org/contributors/amirhaghani-brain/badge.svg" alt="XERJ Corpus Hub contributor"></a>
 </p>
 
 ---
